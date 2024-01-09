@@ -153,7 +153,7 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 resetScanOptions();
                 findLowEnergyDevices(callbackContext, serviceUUIDs, scanSeconds);
             } catch (Exception e) {
-                callbackContext.error("Error: " + e.getMessage())
+                callbackContext.error("Error: " + e.getMessage());
             }
         } else if (action.equals(START_SCAN)) {
             try {
