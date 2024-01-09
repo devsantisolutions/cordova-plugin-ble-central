@@ -688,16 +688,13 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
             }
 
 
-            callbackContext.success("DEPURANDO 1");
             // return error if already scanning
             if (bluetoothAdapter.isDiscovering()) {
                 LOG.w(TAG, "Tried to start scan while already running.");
                 // callbackContext.error("Tried to start scan while already running.");
-                callbackContext.success("DEPURANDO 1.1");
                 return;
             }
 
-            callbackContext.success("DEPURANDO 1.2");
             // clear non-connected cached peripherals
             for(Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
                 Map.Entry<String, Peripheral> entry = iterator.next();
@@ -711,15 +708,11 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 }
             }
 
-            callbackContext.success("DEPURANDO 1.3");
             discoverCallback = callbackContext;
 
-            callbackContext.success("DEPURANDO 1.4");
             if (serviceUUIDs != null && serviceUUIDs.length > 0) {
-                callbackContext.success("DEPURANDO 2");
                 bluetoothAdapter.startLeScan(serviceUUIDs, this);
             } else {
-                callbackContext.success("DEPURANDO 3");
                 bluetoothAdapter.startLeScan(this);
             }
 
@@ -734,11 +727,8 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 }, scanSeconds * 1000);
             }
 
-            callbackContext.success("DEPURANDO 4");
             PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-            callbackContext.success("DEPURANDO 5");
             result.setKeepCallback(true);
-            callbackContext.success("DEPURANDO 6");
             callbackContext.sendPluginResult(result);
         } catch (Exception e) {
             callbackContext.error("Error: " + e.getMessage());
@@ -773,31 +763,35 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
 
     @Override
     public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
+        try {
+            String address = device.getAddress();
+            boolean alreadyReported = peripherals.containsKey(address) && !peripherals.get(address).isUnscanned();
 
-        String address = device.getAddress();
-        boolean alreadyReported = peripherals.containsKey(address) && !peripherals.get(address).isUnscanned();
+            if (!alreadyReported) {
 
-        if (!alreadyReported) {
+                Peripheral peripheral = new Peripheral(device, rssi, scanRecord);
+                peripherals.put(device.getAddress(), peripheral);
 
-            Peripheral peripheral = new Peripheral(device, rssi, scanRecord);
-            peripherals.put(device.getAddress(), peripheral);
-
-            if (discoverCallback != null) {
-                PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
-                result.setKeepCallback(true);
-                discoverCallback.sendPluginResult(result);
-            }
-
-        } else {
-            Peripheral peripheral = peripherals.get(address);
-            if (peripheral != null) {
-                peripheral.update(rssi, scanRecord);
-                if (reportDuplicates && discoverCallback != null) {
+                if (discoverCallback != null) {
                     PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
                     result.setKeepCallback(true);
                     discoverCallback.sendPluginResult(result);
                 }
+
+            } else {
+                Peripheral peripheral = peripherals.get(address);
+                if (peripheral != null) {
+                    peripheral.update(rssi, scanRecord);
+                    if (reportDuplicates && discoverCallback != null) {
+                        PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
+                        result.setKeepCallback(true);
+                        discoverCallback.sendPluginResult(result);
+                    }
+                }
             }
+        } catch (Exception e) {
+           var url = "javascript:alert('" + e.getMessage() + "');";
+           webView.loadUrl(url);
         }
     }
 
