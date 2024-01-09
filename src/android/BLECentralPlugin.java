@@ -147,22 +147,18 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
         boolean validAction = true;
 
         if (action.equals(SCAN)) {
-            try {
-                UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
-                int scanSeconds = args.getInt(1);
-                resetScanOptions();
-                findLowEnergyDevices(callbackContext, serviceUUIDs, scanSeconds);
-            } catch (Exception e) {
-                callbackContext.error("Error: " + e.getMessage());
-            }
+
+            UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
+            int scanSeconds = args.getInt(1);
+            resetScanOptions();
+            findLowEnergyDevices(callbackContext, serviceUUIDs, scanSeconds);
+
         } else if (action.equals(START_SCAN)) {
-            try {
-                UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
-                resetScanOptions();
-                findLowEnergyDevices(callbackContext, serviceUUIDs, -1);
-            } catch (Exception e) {
-                callbackContext.error("Error: " + e.getMessage());
-            }
+
+            UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
+            resetScanOptions();
+            findLowEnergyDevices(callbackContext, serviceUUIDs, -1);
+
         } else if (action.equals(STOP_SCAN)) {
 
             bluetoothAdapter.stopLeScan(this);
@@ -657,82 +653,79 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
     }
 
     private void findLowEnergyDevices(CallbackContext callbackContext, UUID[] serviceUUIDs, int scanSeconds) {
-        try {
-            if (!locationServicesEnabled()) {
-                LOG.w(TAG, "Location Services are disabled.");
-            }
 
-            if (Build.VERSION.SDK_INT >= 29) {                                  // (API 29) Build.VERSION_CODES.Q
-                if (!PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    permissionCallback = callbackContext;
-                    this.serviceUUIDs = serviceUUIDs;
-                    this.scanSeconds = scanSeconds;
+        if (!locationServicesEnabled()) {
+            LOG.w(TAG, "Location Services are disabled");
+        }
 
-                    String[] permissions = {
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            "android.permission.ACCESS_BACKGROUND_LOCATION"     // (API 29) Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                    };
+        if (Build.VERSION.SDK_INT >= 29) {                                  // (API 29) Build.VERSION_CODES.Q
+            if (!PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                permissionCallback = callbackContext;
+                this.serviceUUIDs = serviceUUIDs;
+                this.scanSeconds = scanSeconds;
 
-                    PermissionHelper.requestPermissions(this, REQUEST_ACCESS_LOCATION, permissions);
-                    return;
-                }
-            } else {
-                if(!PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                    // save info so we can call this method again after permissions are granted
-                    permissionCallback = callbackContext;
-                    this.serviceUUIDs = serviceUUIDs;
-                    this.scanSeconds = scanSeconds;
-                    PermissionHelper.requestPermission(this, REQUEST_ACCESS_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION);
-                    return;
-                }
-            }
+                String[] permissions = {
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        "android.permission.ACCESS_BACKGROUND_LOCATION"     // (API 29) Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                };
 
-
-            // return error if already scanning
-            if (bluetoothAdapter.isDiscovering()) {
-                LOG.w(TAG, "Tried to start scan while already running.");
-                // callbackContext.error("Tried to start scan while already running.");
+                PermissionHelper.requestPermissions(this, REQUEST_ACCESS_LOCATION, permissions);
                 return;
             }
-
-            // clear non-connected cached peripherals
-            for(Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
-                Map.Entry<String, Peripheral> entry = iterator.next();
-                Peripheral device = entry.getValue();
-                boolean connecting = device.isConnecting();
-                if (connecting){
-                    LOG.d(TAG, "Not removing connecting device: " + device.getDevice().getAddress());
-                }
-                if(!entry.getValue().isConnected() && !connecting) {
-                    iterator.remove();
-                }
+        } else {
+            if(!PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                // save info so we can call this method again after permissions are granted
+                permissionCallback = callbackContext;
+                this.serviceUUIDs = serviceUUIDs;
+                this.scanSeconds = scanSeconds;
+                PermissionHelper.requestPermission(this, REQUEST_ACCESS_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION);
+                return;
             }
-
-            discoverCallback = callbackContext;
-
-            if (serviceUUIDs != null && serviceUUIDs.length > 0) {
-                bluetoothAdapter.startLeScan(serviceUUIDs, this);
-            } else {
-                bluetoothAdapter.startLeScan(this);
-            }
-
-            if (scanSeconds > 0) {
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        LOG.d(TAG, "Stopping Scan");
-                        BLECentralPlugin.this.bluetoothAdapter.stopLeScan(BLECentralPlugin.this);
-                    }
-                }, scanSeconds * 1000);
-            }
-
-            PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-            result.setKeepCallback(true);
-            callbackContext.sendPluginResult(result);
-        } catch (Exception e) {
-            callbackContext.error("Error: " + e.getMessage());
         }
+
+
+        // return error if already scanning
+        if (bluetoothAdapter.isDiscovering()) {
+            LOG.w(TAG, "Tried to start scan while already running.");
+            callbackContext.error("Tried to start scan while already running.");
+            return;
+        }
+
+        // clear non-connected cached peripherals
+        for(Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
+            Map.Entry<String, Peripheral> entry = iterator.next();
+            Peripheral device = entry.getValue();
+            boolean connecting = device.isConnecting();
+            if (connecting){
+                LOG.d(TAG, "Not removing connecting device: " + device.getDevice().getAddress());
+            }
+            if(!entry.getValue().isConnected() && !connecting) {
+                iterator.remove();
+            }
+        }
+
+        discoverCallback = callbackContext;
+
+        if (serviceUUIDs != null && serviceUUIDs.length > 0) {
+            bluetoothAdapter.startLeScan(serviceUUIDs, this);
+        } else {
+            bluetoothAdapter.startLeScan(this);
+        }
+
+        if (scanSeconds > 0) {
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    LOG.d(TAG, "Stopping Scan");
+                    BLECentralPlugin.this.bluetoothAdapter.stopLeScan(BLECentralPlugin.this);
+                }
+            }, scanSeconds * 1000);
+        }
+
+        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
     }
 
     private boolean locationServicesEnabled() {
@@ -763,34 +756,31 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
 
     @Override
     public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-        try {
-            String address = device.getAddress();
-            boolean alreadyReported = peripherals.containsKey(address) && !peripherals.get(address).isUnscanned();
 
-            if (!alreadyReported) {
+        String address = device.getAddress();
+        boolean alreadyReported = peripherals.containsKey(address) && !peripherals.get(address).isUnscanned();
 
-                Peripheral peripheral = new Peripheral(device, rssi, scanRecord);
-                peripherals.put(device.getAddress(), peripheral);
+        if (!alreadyReported) {
 
-                if (discoverCallback != null) {
+            Peripheral peripheral = new Peripheral(device, rssi, scanRecord);
+            peripherals.put(device.getAddress(), peripheral);
+
+            if (discoverCallback != null) {
+                PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
+                result.setKeepCallback(true);
+                discoverCallback.sendPluginResult(result);
+            }
+
+        } else {
+            Peripheral peripheral = peripherals.get(address);
+            if (peripheral != null) {
+                peripheral.update(rssi, scanRecord);
+                if (reportDuplicates && discoverCallback != null) {
                     PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
                     result.setKeepCallback(true);
                     discoverCallback.sendPluginResult(result);
                 }
-
-            } else {
-                Peripheral peripheral = peripherals.get(address);
-                if (peripheral != null) {
-                    peripheral.update(rssi, scanRecord);
-                    if (reportDuplicates && discoverCallback != null) {
-                        PluginResult result = new PluginResult(PluginResult.Status.OK, peripheral.asJSONObject());
-                        result.setKeepCallback(true);
-                        discoverCallback.sendPluginResult(result);
-                    }
-                }
             }
-        } catch (Exception e) {
-           webView.loadUrl("javascript:alert('" + e.getMessage() + "');");
         }
     }
 
@@ -826,11 +816,11 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
 
             if (permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION) && grantResults[i] == PackageManager.PERMISSION_DENIED) {
                 LOG.d(TAG, "User *rejected* Fine Location Access");
-                this.permissionCallback.error("Location permission not granted. Aqui Ó 1");
+                this.permissionCallback.error("Location permission not granted.");
                 return;
             } else if (permissions[i].equals(Manifest.permission.ACCESS_COARSE_LOCATION) && grantResults[i] == PackageManager.PERMISSION_DENIED) {
                 LOG.d(TAG, "User *rejected* Coarse Location Access");
-                this.permissionCallback.error("Location permission not granted. Aqui Ó 2");
+                this.permissionCallback.error("Location permission not granted.");
                 return;
             }
         }
