@@ -790,8 +790,7 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 }
             }
         } catch (Exception e) {
-           var url = "javascript:alert('" + e.getMessage() + "');";
-           webView.loadUrl(url);
+           webView.loadUrl("javascript:alert('" + e.getMessage() + "');");
         }
     }
 
