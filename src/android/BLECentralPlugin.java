@@ -147,20 +147,20 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
         boolean validAction = true;
 
         if (action.equals(SCAN)) {
-
-            UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
-            int scanSeconds = args.getInt(1);
-            resetScanOptions();
-            findLowEnergyDevices(callbackContext, serviceUUIDs, scanSeconds);
-
+            try {
+                UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
+                int scanSeconds = args.getInt(1);
+                resetScanOptions();
+                findLowEnergyDevices(callbackContext, serviceUUIDs, scanSeconds);
+            } catch (Exception e) {
+                callbackContext.error("Error: " + e.getMessage())
+            }
         } else if (action.equals(START_SCAN)) {
-            System.out.println("START SCAN!!");
             try {
                 UUID[] serviceUUIDs = parseServiceUUIDList(args.getJSONArray(0));
                 resetScanOptions();
                 findLowEnergyDevices(callbackContext, serviceUUIDs, -1);
             } catch (Exception e) {
-                System.out.println("DEPURANODO EXCEÇÃO: " + e);
                 callbackContext.error("Error: " + e.getMessage());
             }
         } else if (action.equals(STOP_SCAN)) {
@@ -688,13 +688,16 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
             }
 
 
+            callbackContext.success("DEPURANDO 1");
             // return error if already scanning
             if (bluetoothAdapter.isDiscovering()) {
                 LOG.w(TAG, "Tried to start scan while already running.");
-                callbackContext.error("Tried to start scan while already running.");
+                // callbackContext.error("Tried to start scan while already running.");
+                callbackContext.success("DEPURANDO 1.1");
                 return;
             }
 
+            callbackContext.success("DEPURANDO 1.2");
             // clear non-connected cached peripherals
             for(Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
                 Map.Entry<String, Peripheral> entry = iterator.next();
@@ -708,11 +711,15 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 }
             }
 
+            callbackContext.success("DEPURANDO 1.3");
             discoverCallback = callbackContext;
 
+            callbackContext.success("DEPURANDO 1.4");
             if (serviceUUIDs != null && serviceUUIDs.length > 0) {
+                callbackContext.success("DEPURANDO 2");
                 bluetoothAdapter.startLeScan(serviceUUIDs, this);
             } else {
+                callbackContext.success("DEPURANDO 3");
                 bluetoothAdapter.startLeScan(this);
             }
 
@@ -727,11 +734,13 @@ public class BLECentralPlugin extends CordovaPlugin implements BluetoothAdapter.
                 }, scanSeconds * 1000);
             }
 
+            callbackContext.success("DEPURANDO 4");
             PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+            callbackContext.success("DEPURANDO 5");
             result.setKeepCallback(true);
+            callbackContext.success("DEPURANDO 6");
             callbackContext.sendPluginResult(result);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             callbackContext.error("Error: " + e.getMessage());
         }
     }
